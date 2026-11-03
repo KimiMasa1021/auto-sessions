@@ -3,7 +3,7 @@
 Jira: サイト {{SITE}}、cloudId {{CLOUD_ID}}、プロジェクト {{PROJECT}}。子のルーティン: trigger_id {{CHILD_TRIGGER_ID}}（名前の既定値は「{{CHILD_NAME}}」）。
 
 1. Atlassian（Jira）コネクタの searchJiraIssuesUsingJql で、cloudId {{CLOUD_ID}} に対して次の JQL を検索する（fields は summary, status, labels、maxResults 20）:
-   project = {{PROJECT}} AND status = "{{STATUS}}" AND (labels is EMPTY OR labels not in ({{LABEL}})) ORDER BY created ASC
+   project = {{PROJECT}} AND status = "{{STATUS}}" {{FILTERS}}AND (labels is EMPTY OR labels not in ({{LABEL}})) ORDER BY created ASC
 2. 結果が0件なら「新しい課題はありません。」とだけ報告して終わる。
 3. 見つかった課題ごとに、次の順で1件ずつ処理する（並行して処理しない。1回の実行で最大で10件）:
    a. RemoteTrigger ツール（未読み込みなら ToolSearch で "select:RemoteTrigger" を読み込む）を action "update"、trigger_id "{{CHILD_TRIGGER_ID}}"、body {"name": "<課題キー> <件名>"} で呼び、子のルーティン名をその課題に合わせる。件名が30文字を超えるときは30文字で切る。
