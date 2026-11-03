@@ -1,0 +1,50 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: JSON が読めて、バージョンがそろっている
+        run: |
+          python3 - <<'EOF'
+          import json, sys
+          plugin = json.load(open(".claude-plugin/plugin.json"))
+          market = json.load(open(".claude-plugin/marketplace.json"))
+          versions = {plugin["version"]} | {p["version"] for p in market["plugins"] if "version" in p}
+          print("versions:", versions)
+          sys.exit(len(versions) != 1)
+          EOF
+
+      - name: スクリプトが構文として正しい
+        run: python3 -m py_compile skills/*/scripts/*.py
+
+      - name: 単体テスト
+        run: |
+          if [ -d tests ]; then python3 -m unittest discover -s tests -v; else echo "tests/ なし"; fi
+
+      - name: 雛形の置き換え漏れがない
+        # 雛形にある {{NAME}} が、同じスキルの SKILL.md か actions.md / filters.md に書かれているか
+        run: |
+          python3 - <<'EOF'
+          import pathlib, re, sys
+          bad = []
+          for skill in pathlib.Path("skills").iterdir():
+              docs = "".join(p.read_text() for p in [skill / "SKILL.md", *skill.glob("templates/*.md")])
+              for tpl in skill.glob("templates/*.md"):
+                  for name in set(re.findall(r"\{\{(\w+)\}\}", tpl.read_text())):
+                      mentions = docs.count("{{" + name + "}}") - tpl.read_text().count("{{" + name + "}}")
+                      if mentions == 0:
+                          bad.append(f"{tpl}: {{{{{name}}}}} の置き換え方がどこにも書かれていない")
+          print("\n".join(bad) or "OK")
+          sys.exit(bool(bad))
+          EOF
