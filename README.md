@@ -37,7 +37,22 @@ Claude Desktop のセッションで、次を順に実行します。
 
 どれを選んでも、GitHub や Jira への書き込みと push は、セッションで指示するまで行いません。あとから変えたいときは、スキルをもう一度実行します。
 
-最後に、サイドバーの「Scheduled」から親を開き、モデルを選んだものに、作業フォルダを消えない場所に変えてください（この2つは Edit 画面からしか変えられません）。
+最後に、サイドバーの「Scheduled」から親を開き、Edit で次の3つを設定してください（どれも Edit 画面からしか変えられません）。
+
+- モデル: セットアップで選んだ親のモデル
+- 作業フォルダ: 消えない場所（ホームフォルダや Desktop など）
+- 権限モード: Auto（Auto で保存されていなければ）
+
+## 更新のしかた
+
+```
+claude plugin marketplace update auto-sessions
+claude plugin update auto-sessions@auto-sessions
+```
+
+実行したら Claude Desktop を再起動します。
+
+プラグインを更新しても、すでに作った親と子のプロンプトや `detect.py` は古いままです。新しい版の動きにしたいときは、スキルをもう一度実行します。親と子は作り直さずに上書きされ、GitHub 用の処理済みの記録（`~/.claude/pr-session-watch/state.json`）も残ります。
 
 ## 構成
 
