@@ -48,7 +48,7 @@ description: Jira のプロジェクトで課題が指定のステータス（�
 5. 検知する課題の絞り込みを聞く。`templates/filters.md` を読み、AskUserQuestion で「期間」と「担当者」を1回にまとめて聞く。選択肢は表の4つずつで、先頭がおすすめ。各選択肢の description には表の補足を短く書く。
    - 「最近作られたもの」なら日数を、「期間を指定」なら開始日と終了日を、「特定の人」なら名前かメールアドレスを、続けて聞く。
    - 選んだ結果から、filters.md の決まりに従って FILTERS を作って控える。
-6. 決めた値で、親と同じ JQL（`project = <PROJECT> AND status = "<STATUS>" <FILTERS>AND (labels is EMPTY OR labels not in (<LABEL>)) ORDER BY created ASC`）を `searchJiraIssuesUsingJql` で一度試し、エラーにならないことと、いま何件が対象になるかを確かめる。
+6. 決めた値で、親と同じ JQL（`project = <PROJECT> AND status = "<STATUS>" <FILTERS>AND (labels is EMPTY OR labels not in ("<LABEL>")) ORDER BY created ASC`）を `searchJiraIssuesUsingJql` で一度試し、エラーにならないことと、いま何件が対象になるかを確かめる。
    - エラーになったら（スプリントを使っていないプロジェクトで「今のスプリント」を選んだときなど）、理由を伝えて 5 を聞き直す。
    - 対象が多いと、親の初回でその数だけセッションができる（1回で最大10件）。ユーザーに件数を伝え、多すぎるなら、先に既存の課題にラベルを付けておくか、絞り込みを変えるかを相談する。
    - 最後に、できあがった JQL をそのまま見せる。
