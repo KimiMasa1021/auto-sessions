@@ -52,7 +52,7 @@ description: Jira のプロジェクトで課題が指定のステータス（�
 1. `templates/child.md` を読み、`{{SITE}}` `{{CLOUD_ID}}` `{{PROJECT}}` `{{STATUS}}` `{{ACTION}}` `{{WORKSPACE_RULE}}` を置き換える。`{{` が残っていないことを確かめる。
 2. 共通の手順の「1」「1.5」「2」に従う（1.5 で間隔とモデルと通知を聞く）。値は次のとおり。
    - name: `<PROJECT> 課題セッション（子）`
-   - allowed_tools: `["Read", "Glob", "Grep", "WebSearch", "WebFetch"]`。「作業の準備まで」を選んだときだけ `"Bash"` を足す（git を使うため）
+   - allowed_tools: `["Read", "Glob", "Grep"]`。「作業の準備まで」を選んだときだけ `"Bash"` を足す（git を使うため）。課題の本文に書かれた URL を開かせないよう、WebSearch と WebFetch は入れない
    - プロンプト: 1 で置き換えたもの
    - コネクタ: Atlassian のコネクタだけを残す。作成後の `get` で `mcp_connections` から url に `atlassian` を含むものを探し、`update` でその1つだけの配列にする。見つからなければ、claude.ai で Atlassian のコネクタがつながっているか確かめてもらう。
 
