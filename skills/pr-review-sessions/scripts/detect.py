@@ -3,6 +3,7 @@
 
 使い方:
   detect.py detect               検知して events を標準出力に出す（状態はまだ更新しない）
+  detect.py detect --dry-run     検知して出すだけ。pending.json も書かない（セットアップ時の確認に使う）
   detect.py bind THREAD SESSION  PR と立場（thread）に、Desktop のセッション ID を結び付ける
   detect.py commit ID...         処理に成功した event の ID を渡して、状態を確定する
   detect.py skip-existing        いま検知される出来事をすべて処理済みにする（セットアップ時に使う）
@@ -12,11 +13,14 @@
 各 event の session に、同じ PR・同じ立場で前に作ったセッションの ID が入る（なければ null）。
 
 状態は同じフォルダの state.json に、直前の検知結果は pending.json に置く。
+pending.json は detect から commit までのあいだだけある。新しい pending.json があるあいだに detect すると、
+別の実行が進行中とみなして busy を出し、何も検知しない（実行が重なって同じセッションを二重に作らないため）。
 """
 import json
 import os
 import subprocess
 import sys
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(HERE, "state.json")
@@ -25,6 +29,7 @@ TEST_EVENTS = os.path.join(HERE, "test_events.json")  # 動作確認用。あれ
 INCLUDE_SELF = os.path.join(HERE, "include_self")  # 動作確認用。あれば自分のレビューも数える
 INCLUDE_BOTS = os.path.join(HERE, "include_bots")  # あれば bot のレビューも数える
 MAX_EVENTS = 10
+BUSY_SECONDS = 20 * 60  # これより古い pending.json は、途中で止まった実行の残りとみなして上書きする
 
 
 def gh_json(args):
@@ -56,6 +61,15 @@ def pr_key(repo, number):
 def clean(text):
     """PR のタイトルなど外部の文字列から、改行や制御文字を取り除く。"""
     return "".join(" " if ch.isspace() else ch for ch in text if ch.isprintable() or ch.isspace()).strip()
+
+
+def busy():
+    """別の実行の detect から commit までのあいだなら True。"""
+    try:
+        age = time.time() - os.path.getmtime(PENDING)
+    except FileNotFoundError:
+        return False
+    return age < BUSY_SECONDS
 
 
 def is_initialized(state):
@@ -103,7 +117,13 @@ OUTPUT_FIELDS = ("id", "kind", "label", "repo", "number", "role", "thread",
                  "name", "session_title", "session", "payload", "message")
 
 
-def detect(quiet=False):
+def detect(quiet=False, dry_run=False):
+    if not dry_run and busy():
+        if quiet:
+            sys.exit("別の実行が進行中です（pending.json が新しい）。少し待ってからもう一度実行してください。")
+        print(json.dumps({"busy": True, "first_run": False, "events": [], "deferred": 0},
+                         ensure_ascii=False, indent=2))
+        return []
     state = load(STATE, {"requested": [], "reviews": {}})
     first_run = not is_initialized(state)
     me = gh_json(["api", "user"])["login"]
@@ -166,8 +186,9 @@ def detect(quiet=False):
     events = [finish(e, sessions) for e in events]
 
     # pending にはすべてを残す。出さなかった分は commit で成功に入らないので、次の回に出る
-    save(PENDING, {"current_requested": current_requested,
-                   "reviews_now": reviews_now, "events": events})
+    if not dry_run:
+        save(PENDING, {"current_requested": current_requested,
+                       "reviews_now": reviews_now, "events": events})
     if quiet:
         return events
     shown = [{k: e[k] for k in OUTPUT_FIELDS if k in e} for e in events[:MAX_EVENTS]]
@@ -209,8 +230,10 @@ def skip_existing():
 
 
 if __name__ == "__main__":
-    if len(sys.argv) >= 2 and sys.argv[1] == "detect":
+    if sys.argv[1:] == ["detect"]:
         detect()
+    elif sys.argv[1:] == ["detect", "--dry-run"]:
+        detect(dry_run=True)
     elif len(sys.argv) == 4 and sys.argv[1] == "bind":
         bind(sys.argv[2], sys.argv[3])
     elif len(sys.argv) >= 2 and sys.argv[1] == "commit":

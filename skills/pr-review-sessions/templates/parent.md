@@ -3,7 +3,7 @@
 子のルーティン: trigger_id {{CHILD_TRIGGER_ID}}（名前の既定値は「PR セッション（子）」）
 検知スクリプト: python3 -I ~/.claude/pr-session-watch/detect.py
 
-1. Bash で `python3 -I ~/.claude/pr-session-watch/detect.py detect` を実行し、出力の JSON を読む。失敗したら、エラーをそのまま報告して終わる（commit はしない）。
+1. Bash で `python3 -I ~/.claude/pr-session-watch/detect.py detect` を実行し、出力の JSON を読む。失敗したら、エラーをそのまま報告して終わる（commit はしない）。busy が true なら、「別の実行が進行中のため、今回は検知しませんでした。」とだけ報告して終わる（commit はしない。commit すると、進行中の実行の記録を壊す）。
 2. events が空なら、Bash で `python3 -I ~/.claude/pr-session-watch/detect.py commit` を実行し、「新しい出来事はありません。」とだけ報告して終わる。
 3. ToolSearch で "select:RemoteTrigger,mcp__ccd_session_mgmt__get_session,mcp__ccd_session_mgmt__send_message,mcp__ccd_session_mgmt__set_session_title,mcp__ccd_session_mgmt__list_sessions" を読み込む。
 4. events の各要素を、1件ずつ順に処理する（並行して処理しない）。各要素の name、session_title、session、payload、message、thread はスクリプトが作った値をそのまま使い、自分で作り直さない。

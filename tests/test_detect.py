@@ -143,6 +143,34 @@ class DetectTest(unittest.TestCase):
         self.detect()
         self.commit([])
 
+    def test_overlapping_run_is_busy(self):
+        self.gh.requested = [self.gh.pr("o/r", 6)]
+        first = self.detect()
+        self.assertEqual(len(first["events"]), 1)
+        second = self.detect()  # 1回目の commit の前に、もう1つの実行が来た
+        self.assertTrue(second["busy"])
+        self.assertEqual(second["events"], [])
+        self.commit([first["events"][0]["id"]])
+        self.assertEqual(self.detect()["events"], [])
+
+    def test_stale_pending_is_overwritten(self):
+        self.gh.requested = [self.gh.pr("o/r", 7)]
+        self.detect()
+        old = os.path.getmtime(self.mod.PENDING) - self.mod.BUSY_SECONDS - 1
+        os.utime(self.mod.PENDING, (old, old))  # 途中で止まった実行の残り
+        result = self.detect()
+        self.assertNotIn("busy", result)
+        self.assertEqual(len(result["events"]), 1)
+
+    def test_dry_run_does_not_block_next_run(self):
+        self.gh.requested = [self.gh.pr("o/r", 8)]
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.mod.detect(dry_run=True)
+        self.assertEqual(len(json.loads(out.getvalue())["events"]), 1)
+        self.assertFalse(os.path.exists(self.mod.PENDING))
+        self.assertEqual(len(self.detect()["events"]), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
