@@ -49,6 +49,10 @@ cp "<このスキルのフォルダ>/scripts/detect.py" ~/.claude/pr-session-wat
 
 - すでに `~/.claude/pr-session-watch/state.json` があれば消さない。処理済みの記録とセッションの対応が入っている。
 - 置いたら `python3 -I ~/.claude/pr-session-watch/detect.py detect` を一度実行し、JSON が出ることを確かめる（このあと `commit` はしない。初回の記録は親の最初の実行で行う）。
+- 出力の events の数と deferred を足した件数をユーザーに伝える。親の初回で、その数だけセッションができる（1回の実行で最大10件。残りは次の実行に回る）。
+  - 多すぎるなら、AskUserQuestion で「いま来ている分はセッションにしない」か「そのまま作る」かを聞く。前者なら `python3 -I ~/.claude/pr-session-watch/detect.py skip-existing` を実行する。いまの出来事を処理済みとして記録し、これ以降の出来事だけがセッションになる。
+- bot（Copilot など）のレビューは数えない。数えたいときは `~/.claude/pr-session-watch/include_bots` という空のファイルを置く。
+- PR の会話タブに付いたコメント（レビューではないもの）は検知しない。
 
 ### 3. 子にさせることを聞く
 
