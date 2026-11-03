@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "auto-sessions",
-      "description": "Jira の新しい課題や GitHub のレビューを15分ごとに検知し、Claude Desktop に課題・PR ごとのセッションを自動で作る仕組みをセットアップする",
-      "version": "0.1.0",
+      "description": "Jira の新しい課題や GitHub のレビューを決まった間隔（既定は15分）で検知し、Claude Desktop に課題・PR ごとのセッションを自動で作る仕組みをセットアップする",
+      "version": "0.2.0",
       "author": {
         "name": "KimiMasa1021"
       },
