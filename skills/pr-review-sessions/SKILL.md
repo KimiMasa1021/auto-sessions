@@ -38,6 +38,7 @@ description: GitHub のレビュー依頼・再レビュー依頼、自分の PR
 - Bash で `gh auth status` を実行する。
   - ログインしていなければ、`gh auth login` をユーザー自身に実行してもらって止まる（トークンを代わりに入力しない）。
   - スコープに `repo` がなければ、`gh auth refresh -s repo` を案内する。組織のリポジトリも見るなら `read:org` も要る。
+- Bash で `gh --version` を実行し、2.48.0 以上であることを確かめる（検知スクリプトが `gh api --slurp` を使う）。古ければ `brew upgrade gh` などで更新してもらう。
 - Bash で `python3 --version` を確かめる。
 
 ### 2. 検知スクリプトを置く
@@ -48,7 +49,7 @@ cp "<このスキルのフォルダ>/scripts/detect.py" ~/.claude/pr-session-wat
 ```
 
 - すでに `~/.claude/pr-session-watch/state.json` があれば消さない。処理済みの記録とセッションの対応が入っている。
-- 置いたら `python3 -I ~/.claude/pr-session-watch/detect.py detect` を一度実行し、JSON が出ることを確かめる（このあと `commit` はしない。初回の記録は親の最初の実行で行う）。
+- 置いたら `python3 -I ~/.claude/pr-session-watch/detect.py detect --dry-run` を一度実行し、JSON が出ることを確かめる（`--dry-run` は記録を何も変えない。初回の記録は親の最初の実行で行う）。`--dry-run` を付けずに実行すると、20分のあいだ親の実行が「進行中」とみなされて検知を飛ばすので、付け忘れない。
 - 出力の events の数と deferred を足した件数をユーザーに伝える。親の初回で、その数だけセッションができる（1回の実行で最大10件。残りは次の実行に回る）。
   - 多すぎるなら、AskUserQuestion で「いま来ている分はセッションにしない」か「そのまま作る」かを聞く。前者なら `python3 -I ~/.claude/pr-session-watch/detect.py skip-existing` を実行する。いまの出来事を処理済みとして記録し、これ以降の出来事だけがセッションになる。
 - bot（Copilot など）のレビューは数えない。数えたいときは `~/.claude/pr-session-watch/include_bots` という空のファイルを置く。
