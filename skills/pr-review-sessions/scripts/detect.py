@@ -74,8 +74,8 @@ def finish(event, sessions):
         "session": sessions.get(thread),
         "payload": f"kind={event['kind']} repo={event['repo']} pr={event['number']}",
         "message": (f"{FOLLOW_UP[event['kind']]}（kind={event['kind']} repo={event['repo']} "
-                    f"pr={event['number']}）このセッションの最初の指示に沿って PR を読み直し、"
-                    "前回の頭出しから変わった点を中心に、この kind の頭出しを書いてください。"),
+                    f"pr={event['number']}）このセッションの最初の指示にある、この kind の対応を行ってください。"
+                    "前回から変わった点を中心にしてください。"),
     })
     return event
 

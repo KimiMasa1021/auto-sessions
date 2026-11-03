@@ -1,7 +1,7 @@
 {
   "name": "auto-sessions",
   "description": "Jira の新しい課題や GitHub のレビューを決まった間隔（既定は15分）で検知し、Claude Desktop に課題・PR ごとのセッションを自動で作る仕組みをセットアップする",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "skills": "./skills/",
   "author": {
     "name": "KimiMasa1021"

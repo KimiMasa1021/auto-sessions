@@ -19,6 +19,7 @@ description: Jira のプロジェクトで課題が指定のステータス（�
 
 - `templates/parent.md`: 親のプロンプト
 - `templates/child.md`: 子のプロンプト
+- `templates/actions.md`: 子にさせることの選択肢と、子への指示の文面
 - 共通の手順: プラグインの `shared/setup-common.md`（このスキルのフォルダから見て `../../shared/setup-common.md`）
 
 始める前に、共通の手順を Read で読む。
@@ -40,15 +41,18 @@ description: Jira のプロジェクトで課題が指定のステータス（�
    - PROJECT: プロジェクトキー。分かれば `getVisibleJiraProjects` の結果から選択肢を出す。
    - STATUS: 検知するステータス名。既定は `To Do`。
    - LABEL: 目印のラベル名。既定は `claude-session`。チームの人にも見えるラベルであることを添える。
-3. 決めた値で一度 `searchJiraIssuesUsingJql` を試し、JQL がエラーにならないことと、いま何件が対象になるかを確かめる。
+   - 子にさせること: `templates/actions.md` の表の3つ（頭出しだけ / 下書きまで / 作業の準備まで）を選択肢にし、description に子への指示を短く言い換えて書く。人によってやりたいことが違うので、Other で自由に書けることも添える。
+3. 「作業の準備まで」を選んだら、AskUserQuestion でリポジトリのフォルダ（手元にクローン済みのもの）を聞く。Bash で `git -C <フォルダ> rev-parse --show-toplevel` が通ることを確かめる。通らなければ聞き直す。
+4. 選んだ結果から ACTION と WORKSPACE_RULE を作って控える（`templates/actions.md` の決まりに従い、`{{REPO_DIR}}` は聞いたフォルダに置き換える）。
+5. 決めた値で一度 `searchJiraIssuesUsingJql` を試し、JQL がエラーにならないことと、いま何件が対象になるかを確かめる。
    - 対象が多いと、親の初回でその数だけセッションができる（1回で最大10件）。ユーザーに件数を伝え、多すぎるなら、先に既存の課題にラベルを付けておくか、JQL に条件を足すかを相談する。
 
 ### 3. 子ルーティンを作る
 
-1. `templates/child.md` を読み、`{{SITE}}` `{{CLOUD_ID}}` `{{PROJECT}}` `{{STATUS}}` を置き換える。`{{` が残っていないことを確かめる。
+1. `templates/child.md` を読み、`{{SITE}}` `{{CLOUD_ID}}` `{{PROJECT}}` `{{STATUS}}` `{{ACTION}}` `{{WORKSPACE_RULE}}` を置き換える。`{{` が残っていないことを確かめる。
 2. 共通の手順の「1」「1.5」「2」に従う（1.5 で間隔とモデルと通知を聞く）。値は次のとおり。
    - name: `<PROJECT> 課題セッション（子）`
-   - allowed_tools: `["Read", "Glob", "Grep", "WebSearch", "WebFetch"]`
+   - allowed_tools: `["Read", "Glob", "Grep", "WebSearch", "WebFetch"]`。「作業の準備まで」を選んだときだけ `"Bash"` を足す（git を使うため）
    - プロンプト: 1 で置き換えたもの
    - コネクタ: Atlassian のコネクタだけを残す。作成後の `get` で `mcp_connections` から url に `atlassian` を含むものを探し、`update` でその1つだけの配列にする。見つからなければ、claude.ai で Atlassian のコネクタがつながっているか確かめてもらう。
 
@@ -63,8 +67,9 @@ description: Jira のプロジェクトで課題が指定のステータス（�
 
 ### 5. 伝える
 
-共通の手順の「4」を伝える。加えて次の3点を伝える。
+共通の手順の「4」を伝える。加えて次の4点を伝える。
 
+- 選んだ「子にさせること」。変えたくなったら、このスキルをもう一度実行すれば子のプロンプトだけを差し替えられる。
 - 同じ課題をもう一度セッションにしたいときは、課題からラベルを外す。次の実行で新しいセッションができる。
 - 子は Jira に書き込まない。親が書き込むのは目印のラベルだけ。
 - 親は Desktop 側の Atlassian コネクタを使う。権限の確認が出たら許可する。

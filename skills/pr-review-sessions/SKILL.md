@@ -23,8 +23,9 @@ description: GitHub のレビュー依頼・再レビュー依頼、自分の PR
 このスキルのフォルダは `${CLAUDE_SKILL_DIR}`。展開されていなければ `${CLAUDE_PLUGIN_ROOT}/skills/pr-review-sessions`、それもなければ Glob で `**/pr-review-sessions/SKILL.md` を探す。
 
 - `scripts/detect.py`: 検知スクリプト
-- `templates/parent.md`: 親のプロンプト（`{{CHILD_TRIGGER_ID}}` を置き換える）
-- `templates/child.md`: 子のプロンプト（そのまま使う）
+- `templates/parent.md`: 親のプロンプト（`{{CHILD_TRIGGER_ID}}` と `{{SKIP_KINDS}}` を置き換える）
+- `templates/child.md`: 子のプロンプト（出来事ごとの対応 `{{ACT_*}}` と `{{WORKSPACE_RULE}}` を置き換える）
+- `templates/actions.md`: 出来事ごとの対応の選択肢と、子への指示の文面
 - 共通の手順: プラグインの `shared/setup-common.md`（このスキルのフォルダから見て `../../shared/setup-common.md`）
 
 始める前に、共通の手順を Read で読む。
@@ -49,18 +50,37 @@ cp "<このスキルのフォルダ>/scripts/detect.py" ~/.claude/pr-session-wat
 - すでに `~/.claude/pr-session-watch/state.json` があれば消さない。処理済みの記録とセッションの対応が入っている。
 - 置いたら `python3 -I ~/.claude/pr-session-watch/detect.py detect` を一度実行し、JSON が出ることを確かめる（このあと `commit` はしない。初回の記録は親の最初の実行で行う）。
 
-### 3. 子ルーティンを作る
+### 3. 子にさせることを聞く
 
-共通の手順の「1」「1.5」「2」に従う（1.5 で間隔とモデルと通知を聞く）。値は次のとおり。
+人によって、出来事ごとにやりたいことが違う。`templates/actions.md` を読み、AskUserQuestion で4つの出来事を1回にまとめて聞く。
 
-- name: `PR セッション（子）`
-- allowed_tools: `["Bash", "Read", "Glob", "Grep"]`
-- プロンプト: `templates/child.md` の中身をそのまま
-- コネクタ: 要らない。作成後に `clear_mcp_connections` で外す。
+- 問いは出来事ごとに1つ（[レビュー依頼]、[再レビュー]、[指摘あり]、[Approve]）。header はそのラベルにする。
+- 選択肢は actions.md の表の「選択肢」列の4つ。先頭がおすすめ（今までの動き）。各選択肢の description には、子への指示を短く言い換えて書く。
+- 「Other」で書かれた文は、actions.md の決まりに従って扱う。
 
-### 4. 親タスクを作る
+続けて、チェックアウトを1つでも選んだら、AskUserQuestion でリポジトリを置くフォルダを聞く（選択肢の例: `~/src`、`~/Desktop`、Other）。`~` はそのまま残してよい。
 
-1. `templates/parent.md` を読み、`{{CHILD_TRIGGER_ID}}` を 3 で控えた trigger_id にすべて置き換える。
+選んだ結果から、次の値を作って控える。
+
+- ACT_REQUEST、ACT_REREQUEST、ACT_COMMENT、ACT_APPROVE: 選ばれた「子への指示」の文
+- WORKSPACE_RULE: actions.md の「{{WORKSPACE_RULE}} に入れる文」
+- SKIP_KINDS: 「セッションを作らない」を選んだ kind を `request, approve` のように並べたもの。なければ `なし`
+- いずれも、文の中の `{{WORK_DIR}}` は聞いたフォルダに置き換える
+
+全部を「セッションを作らない」にしたら、この仕組みを入れる意味がないことを伝えて、選び直してもらう。
+
+### 4. 子ルーティンを作る
+
+1. `templates/child.md` を読み、`{{ACT_REQUEST}}` `{{ACT_REREQUEST}}` `{{ACT_COMMENT}}` `{{ACT_APPROVE}}` `{{WORKSPACE_RULE}}` を 3 で作った値に置き換える。`{{` が残っていないことを確かめる。
+2. 共通の手順の「1」「1.5」「2」に従う（1.5 で間隔とモデルと通知を聞く）。値は次のとおり。
+   - name: `PR セッション（子）`
+   - allowed_tools: `["Bash", "Read", "Glob", "Grep"]`
+   - プロンプト: 1 で置き換えたもの
+   - コネクタ: 要らない。作成後に `clear_mcp_connections` で外す。
+
+### 5. 親タスクを作る
+
+1. `templates/parent.md` を読み、`{{CHILD_TRIGGER_ID}}` を 4 で控えた trigger_id に、`{{SKIP_KINDS}}` を 3 で作った値に置き換える。
 2. 置き換えたあとに `{{` が残っていないことを確かめる。
 3. 共通の手順の「3」に従う。値は次のとおり。
    - taskId: `pr-session-watch`
@@ -68,12 +88,13 @@ cp "<このスキルのフォルダ>/scripts/detect.py" ~/.claude/pr-session-wat
    - description: `GitHub のレビュー依頼やレビューを検知し、PR ごとのセッションを作るか追記する`
    - prompt: 置き換えたもの
 
-### 5. 伝える
+### 6. 伝える
 
-共通の手順の「4」を伝える。加えて次の3点を伝える。
+共通の手順の「4」を伝える。加えて次の4点を伝える。
 
+- 出来事ごとに選んだ対応を、一覧で示す。変えたくなったら、このスキルをもう一度実行すれば子のプロンプトだけを差し替えられる。
 - 初回の実行では、自分の PR にすでに付いているレビューは記録するだけでセッションを作らない。いま来ているレビュー依頼には、初回からセッションができる。
-- 子は GitHub に書き込まない。コメントやレビューの提出は、セッションで指示してから行う。
+- 子は GitHub に書き込まない。コメントやレビューの提出、push は、セッションで指示してから行う。
 - セッションをアーカイブすると、その PR の次の出来事では新しいセッションができる。
 
 ## 動作確認（任意）
