@@ -20,6 +20,7 @@ description: Jira のプロジェクトで課題が指定のステータス（�
 - `templates/parent.md`: 親のプロンプト
 - `templates/child.md`: 子のプロンプト
 - `templates/actions.md`: 子にさせることの選択肢と、子への指示の文面
+- `templates/filters.md`: 検知する課題の絞り込み（期間と担当者）の選択肢と JQL
 - 共通の手順: プラグインの `shared/setup-common.md`（このスキルのフォルダから見て `../../shared/setup-common.md`）
 
 始める前に、共通の手順を Read で読む。
@@ -44,8 +45,13 @@ description: Jira のプロジェクトで課題が指定のステータス（�
    - 子にさせること: `templates/actions.md` の表の3つ（頭出しだけ / 下書きまで / 作業の準備まで）を選択肢にし、description に子への指示を短く言い換えて書く。人によってやりたいことが違うので、Other で自由に書けることも添える。
 3. 「作業の準備まで」を選んだら、AskUserQuestion でリポジトリのフォルダ（手元にクローン済みのもの）を聞く。Bash で `git -C <フォルダ> rev-parse --show-toplevel` が通ることを確かめる。通らなければ聞き直す。
 4. 選んだ結果から ACTION と WORKSPACE_RULE を作って控える（`templates/actions.md` の決まりに従い、`{{REPO_DIR}}` は聞いたフォルダに置き換える）。
-5. 決めた値で一度 `searchJiraIssuesUsingJql` を試し、JQL がエラーにならないことと、いま何件が対象になるかを確かめる。
-   - 対象が多いと、親の初回でその数だけセッションができる（1回で最大10件）。ユーザーに件数を伝え、多すぎるなら、先に既存の課題にラベルを付けておくか、JQL に条件を足すかを相談する。
+5. 検知する課題の絞り込みを聞く。`templates/filters.md` を読み、AskUserQuestion で「期間」と「担当者」を1回にまとめて聞く。選択肢は表の4つずつで、先頭がおすすめ。各選択肢の description には表の補足を短く書く。
+   - 「最近作られたもの」なら日数を、「期間を指定」なら開始日と終了日を、「特定の人」なら名前かメールアドレスを、続けて聞く。
+   - 選んだ結果から、filters.md の決まりに従って FILTERS を作って控える。
+6. 決めた値で、親と同じ JQL（`project = <PROJECT> AND status = "<STATUS>" <FILTERS>AND (labels is EMPTY OR labels not in (<LABEL>)) ORDER BY created ASC`）を `searchJiraIssuesUsingJql` で一度試し、エラーにならないことと、いま何件が対象になるかを確かめる。
+   - エラーになったら（スプリントを使っていないプロジェクトで「今のスプリント」を選んだときなど）、理由を伝えて 5 を聞き直す。
+   - 対象が多いと、親の初回でその数だけセッションができる（1回で最大10件）。ユーザーに件数を伝え、多すぎるなら、先に既存の課題にラベルを付けておくか、絞り込みを変えるかを相談する。
+   - 最後に、できあがった JQL をそのまま見せる。
 
 ### 3. 子ルーティンを作る
 
@@ -58,7 +64,7 @@ description: Jira のプロジェクトで課題が指定のステータス（�
 
 ### 4. 親タスクを作る
 
-1. `templates/parent.md` を読み、`{{SITE}}` `{{CLOUD_ID}}` `{{PROJECT}}` `{{STATUS}}` `{{LABEL}}` `{{CHILD_TRIGGER_ID}}` `{{CHILD_NAME}}` を置き換える。CHILD_NAME は 3 の name。`{{` が残っていないことを確かめる。
+1. `templates/parent.md` を読み、`{{SITE}}` `{{CLOUD_ID}}` `{{PROJECT}}` `{{STATUS}}` `{{LABEL}}` `{{FILTERS}}` `{{CHILD_TRIGGER_ID}}` `{{CHILD_NAME}}` を置き換える。CHILD_NAME は 3 の name。`{{` が残っていないことを確かめる。
 2. 共通の手順の「3」に従う。値は次のとおり。
    - taskId: `jira-todo-watch-<PROJECT を小文字にしたもの>`
    - title: `<PROJECT> の課題の検知（親）`
@@ -67,9 +73,10 @@ description: Jira のプロジェクトで課題が指定のステータス（�
 
 ### 5. 伝える
 
-共通の手順の「4」を伝える。加えて次の4点を伝える。
+共通の手順の「4」を伝える。加えて次の点を伝える。
 
-- 選んだ「子にさせること」。変えたくなったら、このスキルをもう一度実行すれば子のプロンプトだけを差し替えられる。
+- 選んだ「子にさせること」と、検知に使う JQL。変えたくなったら、このスキルをもう一度実行すれば、同じ親と子をそのまま更新できる。
+- 「期間を指定」を選んだときは、終了日を過ぎると新しい課題が対象にならないこと。
 - 同じ課題をもう一度セッションにしたいときは、課題からラベルを外す。次の実行で新しいセッションができる。
 - 子は Jira に書き込まない。親が書き込むのは目印のラベルだけ。
 - 親は Desktop 側の Atlassian コネクタを使う。権限の確認が出たら許可する。
