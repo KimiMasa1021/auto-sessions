@@ -19,7 +19,7 @@ Jira の新しい課題や GitHub のレビューを決まった間隔（既定�
 Claude Desktop のセッションで、次を順に実行します。
 
 ```
-/plugin marketplace add KimiMasa1021/auto-sessions
+/plugin marketplace add narinarita/auto-sessions
 /plugin install auto-sessions@auto-sessions
 ```
 
