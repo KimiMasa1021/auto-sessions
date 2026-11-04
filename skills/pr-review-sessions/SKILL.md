@@ -10,6 +10,7 @@ description: GitHub のレビュー依頼・再レビュー依頼、自分の PR
 - 親「PR レビューの検知」（スケジュール済みタスク、既定は15分ごと）が `gh` で出来事を探す。
 - 出来事ごとに子「PR セッション」（ルーティン）を起動し、サイドバーに「⚡ [種類] リポジトリ#番号 件名」のセッションを作る。
 - 同じ PR・同じ立場の次の出来事は、新しいセッションを作らず、最初のセッションに追記する。
+- 振り分け先を選ぶと、新しくできたセッションを立場（他の人の PR か自分の PR か）ごとに決まったセクションへ移す。セクションがなければ作る。
 
 | 出来事 | セッション名 |
 |---|---|
@@ -23,7 +24,7 @@ description: GitHub のレビュー依頼・再レビュー依頼、自分の PR
 このスキルのフォルダは `${CLAUDE_SKILL_DIR}`。展開されていなければ `${CLAUDE_PLUGIN_ROOT}/skills/pr-review-sessions`、それもなければ Glob で `**/pr-review-sessions/SKILL.md` を探す。
 
 - `scripts/detect.py`: 検知スクリプト
-- `templates/parent.md`: 親のプロンプト（`{{CHILD_TRIGGER_ID}}` と `{{SKIP_KINDS}}` を置き換える）
+- `templates/parent.md`: 親のプロンプト（`{{CHILD_TRIGGER_ID}}`、`{{SKIP_KINDS}}`、`{{SECTION_REVIEWER}}`、`{{SECTION_AUTHOR}}` を置き換える）
 - `templates/child.md`: 子のプロンプト（出来事ごとの対応 `{{ACT_*}}` と `{{WORKSPACE_RULE}}` を置き換える）
 - `templates/actions.md`: 出来事ごとの対応の選択肢と、子への指示の文面
 - 共通の手順: プラグインの `shared/setup-common.md`（このスキルのフォルダから見て `../../shared/setup-common.md`）
@@ -77,7 +78,10 @@ cp "<このスキルのフォルダ>/scripts/detect.py" ~/.claude/pr-session-wat
 ### 4. 子ルーティンを作る
 
 1. `templates/child.md` を読み、`{{ACT_REQUEST}}` `{{ACT_REREQUEST}}` `{{ACT_COMMENT}}` `{{ACT_APPROVE}}` `{{WORKSPACE_RULE}}` を 3 で作った値に置き換える。`{{` が残っていないことを確かめる。
-2. 共通の手順の「1」「1.5」「2」に従う（1.5 で間隔とモデルと通知を聞く）。値は次のとおり。
+2. 共通の手順の「1」「1.5」「1.6」「2」に従う（1.5 で間隔とモデルと通知を、1.6 で振り分け先のセクションを聞く）。値は次のとおり。
+   - 振り分け先は2つ。同じ PR でも立場ごとに別のセッションになり、種類が違っても同じ立場なら同じセッションに追記するので、種類ごとではなく立場ごとに分ける。
+     - SECTION_REVIEWER: 他の人の PR（レビュー依頼、再レビュー）。既定の名前は `PR レビュー`
+     - SECTION_AUTHOR: 自分の PR（指摘あり、Approve）。既定の名前は `自分の PR`
    - name: `PR セッション（子）`
    - allowed_tools: `["Bash", "Read", "Glob", "Grep"]`
    - プロンプト: 1 で置き換えたもの
@@ -85,7 +89,7 @@ cp "<このスキルのフォルダ>/scripts/detect.py" ~/.claude/pr-session-wat
 
 ### 5. 親タスクを作る
 
-1. `templates/parent.md` を読み、`{{CHILD_TRIGGER_ID}}` を 4 で控えた trigger_id に、`{{SKIP_KINDS}}` を 3 で作った値に置き換える。
+1. `templates/parent.md` を読み、`{{CHILD_TRIGGER_ID}}` を 4 で控えた trigger_id に、`{{SKIP_KINDS}}` を 3 で作った値に、`{{SECTION_REVIEWER}}` と `{{SECTION_AUTHOR}}` を共通の手順の 1.6 で控えた値に置き換える。
 2. 置き換えたあとに `{{` が残っていないことを確かめる。
 3. 共通の手順の「3」に従う。値は次のとおり。
    - taskId: `pr-session-watch`
